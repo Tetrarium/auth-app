@@ -27,10 +27,25 @@ export class AuthService {
       ...createUserDto,
       password: hashedPasword,
     });
+
+    const userId = newUser._id.toHexString();
+    console.log(userId);
+
+    const tokens = await this.getTokens(userId, newUser.username);
+    await this.updateRefreshToken(userId, tokens.refreshToken);
+
+    return tokens;
   }
 
   hashData(data: string) {
     return argon.hash(data);
+  }
+
+  async updateRefreshToken(userId: string, refreshToken: string) {
+    const hashedRefreshToken = await this.hashData(refreshToken);
+    await this.usersService.update(userId, {
+      refreshToken: hashedRefreshToken,
+    });
   }
 
   async getTokens(userId: string, username: string) {
@@ -56,5 +71,10 @@ export class AuthService {
         },
       ),
     ]);
+
+    return {
+      accessToken,
+      refreshToken,
+    };
   }
 }
