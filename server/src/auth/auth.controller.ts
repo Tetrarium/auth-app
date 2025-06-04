@@ -1,8 +1,9 @@
-import { Body, Controller, Post, Req } from '@nestjs/common';
+import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { AuthDto } from './dto/auth.dto';
 import { AutentificationRequest } from './entities/autentificationRequest.entity';
+import { AccessTokenGuard } from './common/guards/accessToken.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -18,6 +19,7 @@ export class AuthController {
     return this.authService.signIn(data);
   }
 
+  @UseGuards(AccessTokenGuard)
   @Post('logout')
   logout(@Req() req: AutentificationRequest) {
     return this.authService.logout(req.user.sub);

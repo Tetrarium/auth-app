@@ -7,7 +7,7 @@ import { ConfigModule } from '@nestjs/config';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
-    MongooseModule.forRoot('mongodb://localhost:27017/todo-app'),
+    MongooseModule.forRoot('mongodb://localhost:27017/jwt-app'),
     UsersModule,
     AuthModule,
   ],
