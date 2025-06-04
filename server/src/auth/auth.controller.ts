@@ -1,9 +1,13 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { AuthDto } from './dto/auth.dto';
-import { AutentificationRequest } from './entities/autentificationRequest.entity';
+import {
+  AuthentificatedRequest,
+  RefreshTokenRequest,
+} from './entities/autentificationRequest.entity';
 import { AccessTokenGuard } from './common/guards/accessToken.guard';
+import { RefreshTokenGuard } from './common/guards/refreshToken.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -21,7 +25,14 @@ export class AuthController {
 
   @UseGuards(AccessTokenGuard)
   @Post('logout')
-  logout(@Req() req: AutentificationRequest) {
+  logout(@Req() req: AuthentificatedRequest) {
     return this.authService.logout(req.user.sub);
+  }
+
+  @UseGuards(RefreshTokenGuard)
+  @Get('refresh')
+  refreshTokens(@Req() req: RefreshTokenRequest) {
+    const { sub: userId, refreshToken } = req.user;
+    return this.authService.refreshTokens(userId, refreshToken);
   }
 }

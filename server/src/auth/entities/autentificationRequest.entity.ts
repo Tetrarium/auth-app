@@ -5,6 +5,10 @@ interface JwtPayload {
   username: string;
 }
 
-export interface AutentificationRequest extends Request {
+export interface AuthentificatedRequest extends Request {
   user: JwtPayload;
+}
+
+export interface RefreshTokenRequest extends AuthentificatedRequest {
+  user: JwtPayload & { refreshToken: string };
 }
