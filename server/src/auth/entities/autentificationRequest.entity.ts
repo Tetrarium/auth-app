@@ -12,3 +12,8 @@ export interface AuthentificatedRequest extends Request {
 export interface RefreshTokenRequest extends AuthentificatedRequest {
   user: JwtPayload & { refreshToken: string };
 }
+
+export interface Tokens {
+  accessToken: string;
+  refreshToken: string;
+}

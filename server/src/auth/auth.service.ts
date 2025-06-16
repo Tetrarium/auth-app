@@ -9,6 +9,7 @@ import * as argon from 'argon2';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { UsersService } from 'src/users/users.service';
 import { AuthDto } from './dto/auth.dto';
+import { Tokens } from './entities/autentificationRequest.entity';
 
 @Injectable()
 export class AuthService {
@@ -18,7 +19,7 @@ export class AuthService {
     private configService: ConfigService,
   ) {}
 
-  async signUp(createUserDto: CreateUserDto): Promise<any> {
+  async signUp(createUserDto: CreateUserDto): Promise<Tokens> {
     const userExist = await this.usersService.findByUsername(
       createUserDto.username,
     );
