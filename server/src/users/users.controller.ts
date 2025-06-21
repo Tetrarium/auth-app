@@ -12,6 +12,7 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { AccessTokenGuard } from 'src/auth/common/guards/accessToken.guard';
+import { sanitizeUser } from './common/sanitize-user';
 
 @Controller('users')
 export class UsersController {
@@ -23,24 +24,28 @@ export class UsersController {
   }
 
   @Get()
-  findAll() {
-    return this.usersService.findAll();
+  async findAll() {
+    const users = await this.usersService.findAll();
+    return users.map((user) => sanitizeUser(user));
   }
 
   @Get(':id')
-  findById(@Param('id') id: string) {
-    return this.usersService.findById(id);
+  async findById(@Param('id') id: string) {
+    const user = await this.usersService.findById(id);
+    return sanitizeUser(user);
   }
 
   @UseGuards(AccessTokenGuard)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(id, updateUserDto);
+  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    const user = await this.usersService.update(id, updateUserDto);
+    return sanitizeUser(user);
   }
 
   @UseGuards(AccessTokenGuard)
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+  async remove(@Param('id') id: string) {
+    const user = await this.usersService.remove(id);
+    return sanitizeUser(user);
   }
 }

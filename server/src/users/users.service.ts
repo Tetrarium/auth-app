@@ -26,6 +26,19 @@ export class UsersService {
     return this.userModel.findOne({ username }).exec();
   }
 
+  findByIdWithCredentials(id: string): Promise<UserDocument | null> {
+    return this.userModel.findById(id).select('password refreshToken').exec();
+  }
+
+  findByUsernameWithCredentials(
+    username: string,
+  ): Promise<UserDocument | null> {
+    return this.userModel
+      .findOne({ username })
+      .select('password refreshToken')
+      .exec();
+  }
+
   update(id: string, updateUserDto: UpdateUserDto) {
     return this.userModel
       .findByIdAndUpdate(id, updateUserDto, { new: true })

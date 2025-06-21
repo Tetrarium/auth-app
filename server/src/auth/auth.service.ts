@@ -44,7 +44,10 @@ export class AuthService {
   }
 
   async signIn(data: AuthDto) {
-    const user = await this.usersService.findByUsername(data.username);
+    const user = await this.usersService.findByUsernameWithCredentials(
+      data.username,
+    );
+    console.log(user);
 
     if (!user) {
       throw new BadRequestException('User not found');
@@ -68,7 +71,9 @@ export class AuthService {
   }
 
   async refreshTokens(userId: string, refreshToken: string) {
-    const user = await this.usersService.findById(userId);
+    const user = await this.usersService.findByIdWithCredentials(userId);
+
+    console.log(user);
 
     if (!user || !user.refreshToken) {
       throw new ForbiddenException('Access Denied');
