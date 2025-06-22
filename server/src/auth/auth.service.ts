@@ -10,6 +10,12 @@ import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { UsersService } from 'src/users/users.service';
 import { AuthDto } from './dto/auth.dto';
 import { Tokens } from './entities/autentificationRequest.entity';
+import {
+  RefreshToken,
+  RefreshTokenDocument,
+} from './schemas/refresh-token.schema';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class AuthService {
@@ -17,6 +23,8 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    @InjectModel(RefreshToken.name)
+    private refreshTokenModule: Model<RefreshTokenDocument>,
   ) {}
 
   async signUp(createUserDto: CreateUserDto): Promise<Tokens> {
