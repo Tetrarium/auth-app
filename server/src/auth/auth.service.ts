@@ -24,7 +24,7 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     @InjectModel(RefreshToken.name)
-    private refreshTokenModule: Model<RefreshTokenDocument>,
+    private refreshTokenModel: Model<RefreshTokenDocument>,
   ) {}
 
   async signUp(createUserDto: CreateUserDto): Promise<Tokens> {
@@ -43,10 +43,9 @@ export class AuthService {
     });
 
     const userId = newUser._id.toHexString();
-    console.log(userId);
 
     const tokens = await this.getTokens(userId, newUser.username);
-    await this.updateRefreshToken(userId, tokens.refreshToken);
+    await this.createRefreshToken(userId, tokens.refreshToken);
 
     return tokens;
   }
@@ -55,7 +54,6 @@ export class AuthService {
     const user = await this.usersService.findByUsernameWithCredentials(
       data.username,
     );
-    console.log(user);
 
     if (!user) {
       throw new BadRequestException('User not found');
@@ -68,7 +66,7 @@ export class AuthService {
     }
 
     const tokens = await this.getTokens(user._id.toHexString(), user.username);
-    await this.updateRefreshToken(user._id.toHexString(), tokens.refreshToken);
+    await this.createRefreshToken(user._id.toHexString(), tokens.refreshToken);
 
     return tokens;
   }
@@ -81,23 +79,13 @@ export class AuthService {
   async refreshTokens(userId: string, refreshToken: string) {
     const user = await this.usersService.findByIdWithCredentials(userId);
 
-    console.log(user);
-
-    if (!user || !user.refreshToken) {
+    if (!user) {
       throw new ForbiddenException('Access Denied');
     }
 
-    const refreshTokenMatches = await argon.verify(
-      user.refreshToken,
-      refreshToken,
-    );
+    const tokens = await this.getTokens(userId, user.username);
 
-    if (!refreshTokenMatches) {
-      throw new ForbiddenException('Access Denied');
-    }
-
-    const tokens = await this.getTokens(user._id.toHexString(), user.username);
-    await this.updateRefreshToken(user._id.toHexString(), tokens.refreshToken);
+    await this.updateRefreshToken(userId, refreshToken, tokens.refreshToken);
 
     return tokens;
   }
@@ -106,8 +94,49 @@ export class AuthService {
     return argon.hash(data);
   }
 
-  async updateRefreshToken(userId: string, refreshToken: string) {
+  async createRefreshToken(userId: string, refreshToken: string) {
     const hashedRefreshToken = await this.hashData(refreshToken);
+
+    void this.refreshTokenModel.create({
+      user: userId,
+      tokenHash: hashedRefreshToken,
+    });
+  }
+
+  async updateRefreshToken(
+    userId: string,
+    oldRefreshToken: string,
+    newRefreshToken: string,
+  ) {
+    const hashedRefreshToken = await this.hashData(newRefreshToken);
+    console.log('oldRefreshToken', oldRefreshToken);
+
+    const tokenDocs = await this.refreshTokenModel.find({
+      user: userId,
+    });
+
+    console.log('tokenDocs', tokenDocs);
+
+    if (!tokenDocs || tokenDocs.length === 0) {
+      throw new ForbiddenException('Access Denied');
+    }
+
+    const validToken = await Promise.any(
+      tokenDocs.map(async (doc) => {
+        const isMatch = await argon.verify(doc.tokenHash, oldRefreshToken);
+
+        return isMatch ? doc : Promise.reject(new Error());
+      }),
+    ).catch(() => null);
+
+    if (!validToken) {
+      throw new ForbiddenException('Access Denied');
+    }
+
+    await this.refreshTokenModel.findByIdAndDelete(validToken._id);
+
+    await this.createRefreshToken(userId, newRefreshToken);
+
     await this.usersService.update(userId, {
       refreshToken: hashedRefreshToken,
     });

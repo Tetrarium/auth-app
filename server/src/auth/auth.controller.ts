@@ -42,9 +42,7 @@ export class AuthController {
     @Body() data: AuthDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    console.log('signin', data);
     const { accessToken, refreshToken } = await this.authService.signIn(data);
-    console.log(accessToken);
 
     setRefreshTokenCookie(res, refreshToken);
 
@@ -69,6 +67,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const { sub: userId, refreshToken } = req.user;
+    console.log('refreshTokens userId', userId);
     const { accessToken, refreshToken: newRefreshToken } =
       await this.authService.refreshTokens(userId, refreshToken);
 
