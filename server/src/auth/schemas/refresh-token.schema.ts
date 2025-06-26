@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Types } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
 
 @Schema({ timestamps: true })
 export class RefreshToken {
@@ -19,5 +19,5 @@ export class RefreshToken {
   revoked: boolean;
 }
 
-export type RefreshTokenDocument = RefreshToken & Document;
+export type RefreshTokenDocument = HydratedDocument<RefreshToken>;
 export const RefreshTokenSchema = SchemaFactory.createForClass(RefreshToken);

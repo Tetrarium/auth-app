@@ -10,15 +10,14 @@ import {
 import { AuthService } from './auth.service';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { AuthDto } from './dto/auth.dto';
-import {
-  AuthentificatedRequest,
-  RefreshTokenRequest,
-} from './entities/autentificationRequest.entity';
+import { RefreshTokenRequest } from './entities/autentificationRequest.entity';
 import { AccessTokenGuard } from './common/guards/accessToken.guard';
 import { RefreshTokenGuard } from './common/guards/refreshToken.guard';
 import { Response } from 'express';
-import { setRefreshTokenCookie } from './helpers/setRefreshTokenCookie';
-import { clearRefreshTokenCookie } from './helpers/clearRefreshTokenCookie';
+import {
+  clearRefreshTokenCookies,
+  setRefreshTokenCookies,
+} from './helpers/refreshTokenCookie.helper';
 
 @Controller('auth')
 export class AuthController {
@@ -32,7 +31,7 @@ export class AuthController {
     const { accessToken, refreshToken } =
       await this.authService.signUp(createUserDto);
 
-    setRefreshTokenCookie(res, refreshToken);
+    setRefreshTokenCookies(res, refreshToken);
 
     return { accessToken };
   }
@@ -44,7 +43,7 @@ export class AuthController {
   ) {
     const { accessToken, refreshToken } = await this.authService.signIn(data);
 
-    setRefreshTokenCookie(res, refreshToken);
+    setRefreshTokenCookies(res, refreshToken);
 
     return { accessToken };
   }
@@ -52,12 +51,14 @@ export class AuthController {
   @UseGuards(AccessTokenGuard)
   @Post('logout')
   logout(
-    @Req() req: AuthentificatedRequest,
+    @Req() req: RefreshTokenRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    clearRefreshTokenCookie(res);
+    const { sub } = req.user;
+    const refreshToken = req.cookies?.refreshToken as string;
+    clearRefreshTokenCookies(res);
 
-    return this.authService.logout(req.user.sub);
+    return this.authService.logout(sub, refreshToken);
   }
 
   @UseGuards(RefreshTokenGuard)
@@ -71,7 +72,7 @@ export class AuthController {
     const { accessToken, refreshToken: newRefreshToken } =
       await this.authService.refreshTokens(userId, refreshToken);
 
-    setRefreshTokenCookie(res, newRefreshToken);
+    setRefreshTokenCookies(res, newRefreshToken);
 
     return { accessToken };
   }

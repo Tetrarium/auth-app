@@ -44,10 +44,7 @@ export class AuthService {
 
     const userId = newUser._id.toHexString();
 
-    const tokens = await this.getTokens(userId, newUser.username);
-    await this.createRefreshToken(userId, tokens.refreshToken);
-
-    return tokens;
+    return await this.issueTokensAndSave(userId, newUser.username);
   }
 
   async signIn(data: AuthDto) {
@@ -65,84 +62,79 @@ export class AuthService {
       throw new BadRequestException('Password is incorrect');
     }
 
-    const tokens = await this.getTokens(user._id.toHexString(), user.username);
-    await this.createRefreshToken(user._id.toHexString(), tokens.refreshToken);
-
-    return tokens;
+    return await this.issueTokensAndSave(user._id.toHexString(), user.username);
   }
 
-  async logout(userId: string) {
-    await this.usersService.update(userId, { refreshToken: null });
-    return { message: 'Logout successful' };
-  }
-
-  async refreshTokens(userId: string, refreshToken: string) {
-    const user = await this.usersService.findByIdWithCredentials(userId);
+  async logout(userId: string, token: string) {
+    const user = await this.usersService.findById(userId);
 
     if (!user) {
       throw new ForbiddenException('Access Denied');
     }
 
-    const tokens = await this.getTokens(userId, user.username);
+    const storedTokens = await this.refreshTokenModel.find({ user: userId });
 
-    await this.updateRefreshToken(userId, refreshToken, tokens.refreshToken);
+    const matchedToken = await this.findMatchingToken(storedTokens, token);
 
+    if (!matchedToken) {
+      throw new ForbiddenException('Access Denied');
+    }
+
+    await this.refreshTokenModel.findByIdAndDelete(matchedToken._id);
+    return { message: 'Logout successful' };
+  }
+
+  async refreshTokens(userId: string, oldToken: string) {
+    const user = await this.usersService.findById(userId);
+
+    if (!user) {
+      throw new ForbiddenException('Access Denied');
+    }
+
+    const storedTokens = await this.refreshTokenModel.find({ user: userId });
+
+    const matchedToken = await this.findMatchingToken(storedTokens, oldToken);
+
+    if (!matchedToken) {
+      throw new ForbiddenException('Access Denied');
+    }
+
+    await this.refreshTokenModel.findByIdAndDelete(matchedToken._id);
+
+    return this.issueTokensAndSave(userId, user.username);
+  }
+
+  private async issueTokensAndSave(
+    userId: string,
+    username: string,
+  ): Promise<Tokens> {
+    const tokens = await this.generateTokens(userId, username);
+    await this.saveRefreshToken(userId, tokens.refreshToken);
     return tokens;
   }
 
-  hashData(data: string) {
-    return argon.hash(data);
+  private async saveRefreshToken(userId: string, token: string) {
+    const tokenHash = await this.hashData(token);
+
+    await this.refreshTokenModel.create({ user: userId, tokenHash });
   }
 
-  async createRefreshToken(userId: string, refreshToken: string) {
-    const hashedRefreshToken = await this.hashData(refreshToken);
+  private async findMatchingToken(
+    tokens: RefreshTokenDocument[],
+    rawToken: string,
+  ): Promise<RefreshTokenDocument | null> {
+    for (const tokenDoc of tokens) {
+      const isMatch = await argon.verify(tokenDoc.tokenHash, rawToken);
 
-    void this.refreshTokenModel.create({
-      user: userId,
-      tokenHash: hashedRefreshToken,
-    });
-  }
-
-  async updateRefreshToken(
-    userId: string,
-    oldRefreshToken: string,
-    newRefreshToken: string,
-  ) {
-    const hashedRefreshToken = await this.hashData(newRefreshToken);
-    console.log('oldRefreshToken', oldRefreshToken);
-
-    const tokenDocs = await this.refreshTokenModel.find({
-      user: userId,
-    });
-
-    console.log('tokenDocs', tokenDocs);
-
-    if (!tokenDocs || tokenDocs.length === 0) {
-      throw new ForbiddenException('Access Denied');
+      if (isMatch) {
+        return tokenDoc;
+      }
     }
 
-    const validToken = await Promise.any(
-      tokenDocs.map(async (doc) => {
-        const isMatch = await argon.verify(doc.tokenHash, oldRefreshToken);
-
-        return isMatch ? doc : Promise.reject(new Error());
-      }),
-    ).catch(() => null);
-
-    if (!validToken) {
-      throw new ForbiddenException('Access Denied');
-    }
-
-    await this.refreshTokenModel.findByIdAndDelete(validToken._id);
-
-    await this.createRefreshToken(userId, newRefreshToken);
-
-    await this.usersService.update(userId, {
-      refreshToken: hashedRefreshToken,
-    });
+    return null;
   }
 
-  async getTokens(userId: string, username: string) {
+  private async generateTokens(userId: string, username: string) {
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(
         {
@@ -170,5 +162,9 @@ export class AuthService {
       accessToken,
       refreshToken,
     };
+  }
+
+  private hashData(data: string) {
+    return argon.hash(data);
   }
 }
