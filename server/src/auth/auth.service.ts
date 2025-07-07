@@ -84,6 +84,11 @@ export class AuthService {
     return { message: 'Logout successful' };
   }
 
+  async logoutAllDevices(userId: string) {
+    await this.refreshTokenModel.deleteMany({ userId });
+    return { massage: 'Logout successful' };
+  }
+
   async refreshTokens(userId: string, oldToken: string) {
     const user = await this.usersService.findById(userId);
 

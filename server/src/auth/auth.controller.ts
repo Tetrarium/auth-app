@@ -10,7 +10,10 @@ import {
 import { AuthService } from './auth.service';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { AuthDto } from './dto/auth.dto';
-import { RefreshTokenRequest } from './entities/autentificationRequest.entity';
+import {
+  AuthentificatedRequest,
+  RefreshTokenRequest,
+} from './entities/autentificationRequest.entity';
 import { AccessTokenGuard } from './common/guards/accessToken.guard';
 import { RefreshTokenGuard } from './common/guards/refreshToken.guard';
 import { Response } from 'express';
@@ -68,12 +71,22 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const { sub: userId, refreshToken } = req.user;
-    console.log('refreshTokens userId', userId);
     const { accessToken, refreshToken: newRefreshToken } =
       await this.authService.refreshTokens(userId, refreshToken);
 
     setRefreshTokenCookies(res, newRefreshToken);
 
     return { accessToken };
+  }
+
+  @UseGuards(AccessTokenGuard)
+  @Post('logout/all')
+  logoutAllDevices(
+    @Req() req: AuthentificatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { sub } = req.user;
+    clearRefreshTokenCookies(res);
+    return this.authService.logoutAllDevices(sub);
   }
 }
