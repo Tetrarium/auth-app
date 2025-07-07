@@ -96,3 +96,15 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+## Обновления
+
+- 07.07.2025
+
+  1. feat(auth): Реализован метод разлогинивания на всех устройствах
+
+  2. feat(auth): Отрефактрорен ресурс auth с учетом всех предыдущих изменений
+
+  3. feat(user): Отрефакторен ресурс user. Удалено хранение рефреш токенов из UserDocument (перенесено в AuthDocument)
+
+  4. feat(user): Добавлен декоратор для получения данных о текущем пользователе.
