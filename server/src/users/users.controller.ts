@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  NotFoundException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -19,19 +20,23 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+  async create(@Body() createUserDto: CreateUserDto) {
+    const user = await this.usersService.create(createUserDto);
+    return sanitizeUser(user);
   }
 
   @Get()
   async findAll() {
     const users = await this.usersService.findAll();
-    return users.map((user) => sanitizeUser(user));
+    return users.map(sanitizeUser);
   }
 
   @Get(':id')
   async findById(@Param('id') id: string) {
     const user = await this.usersService.findById(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
     return sanitizeUser(user);
   }
 
@@ -39,6 +44,9 @@ export class UsersController {
   @Patch(':id')
   async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     const user = await this.usersService.update(id, updateUserDto);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
     return sanitizeUser(user);
   }
 
@@ -46,6 +54,9 @@ export class UsersController {
   @Delete(':id')
   async remove(@Param('id') id: string) {
     const user = await this.usersService.remove(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
     return sanitizeUser(user);
   }
 }
