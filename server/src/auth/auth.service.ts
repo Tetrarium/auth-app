@@ -9,13 +9,13 @@ import * as argon from 'argon2';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { UsersService } from 'src/users/users.service';
 import { AuthDto } from './dto/auth.dto';
-import { Tokens } from './entities/autentificationRequest.entity';
 import {
   RefreshToken,
   RefreshTokenDocument,
 } from './schemas/refresh-token.schema';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
+import { Tokens } from './types/tokens.types';
 
 @Injectable()
 export class AuthService {
@@ -80,12 +80,12 @@ export class AuthService {
       throw new ForbiddenException('Access Denied');
     }
 
-    await this.refreshTokenModel.findByIdAndDelete(matchedToken._id);
-    return { message: 'Logout successful' };
+    await this.revokeRefreshToken(matchedToken._id);
+    return { message: 'Logout from all devices successful' };
   }
 
   async logoutAllDevices(userId: string) {
-    await this.refreshTokenModel.deleteMany({ userId });
+    await this.refreshTokenModel.deleteMany({ user: userId });
     return { massage: 'Logout successful' };
   }
 
@@ -104,7 +104,7 @@ export class AuthService {
       throw new ForbiddenException('Access Denied');
     }
 
-    await this.refreshTokenModel.findByIdAndDelete(matchedToken._id);
+    await this.revokeRefreshToken(matchedToken._id);
 
     return this.issueTokensAndSave(userId, user.username);
   }
@@ -122,6 +122,10 @@ export class AuthService {
     const tokenHash = await this.hashData(token);
 
     await this.refreshTokenModel.create({ user: userId, tokenHash });
+  }
+
+  private async revokeRefreshToken(tokenId: Types.ObjectId): Promise<void> {
+    await this.refreshTokenModel.findByIdAndDelete(tokenId);
   }
 
   private async findMatchingToken(
