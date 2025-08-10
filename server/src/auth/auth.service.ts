@@ -51,6 +51,7 @@ export class AuthService {
     const user = await this.usersService.findByUsernameWithCredentials(
       data.username,
     );
+    console.log(user);
 
     if (!user) {
       throw new BadRequestException('User not found');

@@ -30,10 +30,15 @@ export class UsersService {
     return this.userModel.findById(id).select('password').exec();
   }
 
-  findByUsernameWithCredentials(
+  async findByUsernameWithCredentials(
     username: string,
   ): Promise<UserDocument | null> {
-    return this.userModel.findOne({ username }).select('password').exec();
+    console.log('username:', username);
+    const user = await this.userModel
+      .findOne({ username })
+      .select('password')
+      .exec();
+    return user;
   }
 
   update(id: string, updateUserDto: UpdateUserDto) {
