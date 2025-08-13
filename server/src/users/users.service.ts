@@ -33,7 +33,6 @@ export class UsersService {
   async findByUsernameWithCredentials(
     username: string,
   ): Promise<UserDocument | null> {
-    console.log('username:', username);
     const user = await this.userModel
       .findOne({ username })
       .select('password')

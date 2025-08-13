@@ -10,6 +10,7 @@ import {
   NotFoundException,
   HttpCode,
   HttpStatus,
+  Res,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -17,10 +18,16 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { AccessTokenGuard } from 'src/auth/common/guards/accessToken.guard';
 import { sanitizeUser } from './common/sanitize-user';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { AuthService } from 'src/auth/auth.service';
+import { clearRefreshTokenCookies } from 'src/auth/helpers/refreshTokenCookie.helper';
+import { Response } from 'express';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly authService: AuthService,
+  ) {}
 
   @Post()
   async create(@Body() createUserDto: CreateUserDto) {
@@ -37,7 +44,6 @@ export class UsersController {
   @UseGuards(AccessTokenGuard)
   @Get('me')
   async findMe(@CurrentUser('sub') userId: string) {
-    console.log('userId:', userId);
     const user = await this.usersService.findById(userId);
     if (!user) {
       throw new NotFoundException('User not found');
@@ -70,7 +76,14 @@ export class UsersController {
   @UseGuards(AccessTokenGuard)
   @Delete('me')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@CurrentUser('sub') userId: string) {
+  async remove(
+    @CurrentUser('sub') userId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    await this.authService.logoutAllDevices(userId);
+
+    clearRefreshTokenCookies(res);
+
     const user = await this.usersService.remove(userId);
     if (!user) {
       throw new NotFoundException('User not found');
